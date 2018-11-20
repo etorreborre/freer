@@ -1,4 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE MonoLocalBinds #-}
+
 module NonDetEff where
 
 import Control.Applicative
@@ -19,4 +23,4 @@ testIfte = do
   where gen = msum . fmap return $ [2..30]
 
 testIfteRun :: [Int]
-testIfteRun = run . makeChoiceA $ testIfte
+testIfteRun = run . makeChoiceA @'[NonDetEff] $ testIfte

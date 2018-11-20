@@ -1,7 +1,9 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE CPP #-}
 module Teletype where
 
@@ -33,10 +35,13 @@ exitSuccess' = send ExitSuccess
                      -- Effectful Interpreter --
 --------------------------------------------------------------------------------
 runTeletype :: Eff '[Teletype, IO] w -> IO w
-runTeletype req = runM (handleRelay pure go req)
+runTeletype = runM . runTeletype'
+
+runTeletype' :: forall r w o . (MemberOut Teletype r o, Member IO o) => Eff r w -> Eff o w
+runTeletype' = handleRelay pure go
   where
-   go :: Teletype v -> Arr '[IO] v w -> Eff '[IO] w
-   go (PutStrLn msg) q = send (putStrLn msg) >>= q
+   go :: Teletype v -> Arr o v w -> Eff o w
+   go (PutStrLn msg) q = send @IO @o (putStrLn msg) >>= q
    go GetLine q = send getLine >>= q
    go ExitSuccess q = send exitSuccess >>= q
 
@@ -45,7 +50,7 @@ runTeletype req = runM (handleRelay pure go req)
 --------------------------------------------------------------------------------
 runTeletypePure :: [String] -> Eff '[Teletype] w -> [String]
 runTeletypePure inputs req =
-  reverse . snd $ run (handleRelayS (inputs, []) (\s _ -> pure s) go req)
+  reverse . snd $ run (handleRelayS @Teletype (inputs, []) (\s _ -> pure s) go req)
   where
     go :: ([String], [String])
        -> Teletype v
