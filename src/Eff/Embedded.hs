@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Eff.Embedded (
   Embedded(..),
@@ -51,15 +52,14 @@ raiseEmbedded = loop
 liftEmbedded :: (Raisable m r) => Eff (Embedded m ': r) a -> Eff r a
 liftEmbedded = runEmbedded void
 
-runEmbedded :: (Raisable m r)
+runEmbedded :: forall m r r' a . (Raisable m r)
             => (forall v. Eff r v -> Eff r' ())
             -> Eff (Embedded m ': r') a
             -> Eff r' a
-runEmbedded f = handleRelay pure $ \(Embed e) -> (f (raiseEmbedded e) >>=)
+runEmbedded f = handleRelay @(Embedded m ': r') @(Embedded m) @r' pure $ \(Embed e) -> (f (raiseEmbedded e) >>=)
 
 runEmbeddedAsync :: (Raisable m d, Member IO r)
                  => (forall v. Eff d v -> IO v)
                  -> Eff (Embedded m ': r) a
                  -> Eff r a
 runEmbeddedAsync f = runEmbedded (send @IO . void . async . f)
-

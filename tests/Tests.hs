@@ -117,6 +117,10 @@ stateTests = testGroup "State tests"
     \start -> testGetStart start == (start,start)
   , testProperty "testInveffmap: inveffmap works over state"
       $ \n -> testInveffmap n == (show (fst n) ++ snd n)
+  , testProperty "test State / Exception" $ \n ->
+      testStateException n == Left "boom"
+  , testProperty "test Exception / State" $ \n ->
+      testExceptionState n == (Left "boom", n)
   ]
 
 --------------------------------------------------------------------------------

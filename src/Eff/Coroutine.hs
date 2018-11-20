@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE TypeOperators    #-}
-
+{-# LANGUAGE MonoLocalBinds   #-}
 -- |
 -- Module:       Eff.Coroutine
 -- Description:  Composable coroutine effects layer.

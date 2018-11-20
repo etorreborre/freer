@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE CPP #-}
 module Tests.Reader (
   testReader,
@@ -19,11 +21,13 @@ import Eff.Reader.Pure
 
 import Tests.Common
 
+type Stack = '[Reader Int]
+type Stack2 = '[Reader Int, Reader Float]
 --------------------------------------------------------------------------------
                             -- Examples --
 --------------------------------------------------------------------------------
 testReader :: Int -> Int -> Int
-testReader n x = run . runReader n $ ask `add` pure x
+testReader n x = run . runReader @Stack n $ ask `add` pure x
 
 {-
 t1rr' = run t1
@@ -32,7 +36,7 @@ t1rr' = run t1
 -}
 
 testMultiReader :: Float -> Int -> Float
-testMultiReader f n = run . runReader f . runReader n $ t2
+testMultiReader f n = run . runReader f . runReader @Stack2 n $ t2
   where t2 = do
           v1 <- ask
           v2 <- ask
@@ -46,11 +50,10 @@ t2rrr1' = run $ runReader (runReader t2 (20::Float)) (10::Float)
 -}
 
 testLocal :: Int -> Int -> Int
-testLocal env inc = run $ runReader env t3
+testLocal env inc = run $ runReader @Stack env t3
   where t3 = t1 `add` local (+ inc) t1
         t1 = ask `add` return (1 :: Int)
 
 
 testEffmapReader :: Int -> Int -> String
-testEffmapReader n x = run . runReader n . contraeffmap show $ (++) <$> ask <*> pure (show x)
-
+testEffmapReader n x = run . runReader @Stack n . contraeffmap show $ (++) <$> ask <*> pure (show x)

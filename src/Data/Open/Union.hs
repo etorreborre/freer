@@ -34,6 +34,9 @@ module Data.Open.Union (
   module Data.Open.Union,
   Union,
   Member(..),
+  Out,
+  GetOut,
+  MemberOut,
   decomp,
   weaken,
   extract,
@@ -49,4 +52,3 @@ import Data.Open.Union.Internal
 type family Members m r :: Constraint where
   Members (t ': c) r = (Member t r, Members c r)
   Members '[] r = ()
-

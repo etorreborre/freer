@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
 {-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE RankNTypes       #-}
 
 module Eff.Exc.Pure
   ( module Eff.Exc
@@ -15,9 +16,8 @@ import Eff.Exc
 -- If there are no exceptions thrown, returns Right If exceptions are
 -- thrown and not handled, returns Left, interrupting the execution of
 -- any other effect handlers.
-runError :: Eff (Exc e ': r) a -> Eff r (Either e a)
-runError =
-   handleRelay (return . Right) (\ (Exc e) _k -> return (Left e))
+runError :: forall r e a o . (MemberOut (Exc e) r o) => Eff r a -> Eff o (Either e a)
+runError = handleRelay (return . Right) (\ (Exc e) _k -> return (Left e))
 
 -- | A catcher for Exceptions. Handlers are allowed to rethrow
 -- exceptions.

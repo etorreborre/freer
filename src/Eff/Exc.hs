@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE MonoLocalBinds   #-}
 
 {-|
 Module      : Eff.Exception

@@ -5,7 +5,8 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 -- The following is needed to define MonadPlus instance. It is decidable
 -- (there is no recursion!), but GHC cannot see that.
 -- TODO: remove once GHC can deduce the decidability of this instance
@@ -37,7 +38,9 @@ module Eff.Internal (
   Arr,
   Arrs,
   Union,
-
+  Out,
+  GetOut,
+  MemberOut,
   NonDetEff(..),
   makeChoiceA,
   msplit,
@@ -64,7 +67,6 @@ import Control.Monad
 import Control.Applicative
 import Data.Open.Union
 import Data.FTCQueue
-
 
 -- |
 -- Effectful arrow type: a function from a to b that also does effects
@@ -196,42 +198,39 @@ replaceRelay pure' bind = loop
    where k = qComp q loop
 
 
-
--- | Given a request, either handle it or relay it.
-handleRelay
-    :: forall t r a w
-     . (a -> Eff r w)
-    -> (forall v. t v -> Arr r v w -> Eff r w)
-    -> Eff (t ': r) a -> Eff r w
+handleRelay :: forall r t o a w . (MemberOut t r o)
+   => (a -> Eff o w)
+   -> (forall v. t v -> Arr o v w -> Eff o w)
+   -> Eff r a -> Eff o w
 handleRelay ret h = loop
- where
-  loop (Val x)  = ret x
-  loop (E u' q)  = case decomp u' of
-    Right x -> h x k
-    Left  u -> E u (tsingleton k)
-   where k = qComp q loop
+  where
+   loop (Val x)  = ret x
+   loop (E u' q)  = case project u' of
+     Right x -> h x k
+     Left  u -> E u (tsingleton k)
+    where k = qComp q loop
+
 
 -- | Parameterized 'handleRelay'
 -- Allows sending along some state to be handled for the target
 -- effect, or relayed to a handler that can handle the target effect.
-handleRelayS
-    :: forall t r s a w
-     . s
-    -> (s -> a -> Eff r w)
-    -> (forall v. s -> t v -> (s -> Arr r v w) -> Eff r w)
-    -> Eff (t ': r) a
-    -> Eff r w
+handleRelayS :: forall t r o s a w . (MemberOut t r o)
+    => s
+    -> (s -> a -> Eff o w)
+    -> (forall v. s -> t v -> (s -> Arr o v w) -> Eff o w)
+    -> Eff r a
+    -> Eff o w
 handleRelayS s' ret h = loop s'
   where
     loop s (Val x)  = ret s x
-    loop s (E u' q)  = case decomp u' of
+    loop s (E u' q)  = case project u' of
       Right x -> h s x k
       Left  u -> E u (tsingleton (k s))
      where k s'' x = loop s'' $ qApp q x
 
 -- | Intercept the request and possibly reply to it, but leave it
 -- unhandled
-interpose :: Member t r =>
+interpose :: (Member t r) =>
              (a -> Eff r w) -> (forall v. t v -> Arr r v w -> Eff r w) ->
              Eff r a -> Eff r w
 interpose ret h = loop
@@ -266,9 +265,9 @@ instance Member NonDetEff r => MonadPlus (Eff r) where
   mzero       = send MZero
   mplus m1 m2 = send MPlus >>= \x -> if x then m1 else m2
 
--- | A handler for nondeterminstic effects
-makeChoiceA :: Alternative f
-            => Eff (NonDetEff ': r) a -> Eff r (f a)
+-- | A handler for nondeterministic effects
+makeChoiceA :: forall r f a o . (Alternative f, MemberOut NonDetEff r o)
+            => Eff r a -> Eff o (f a)
 makeChoiceA =
   handleRelay (return . pure) $ \m k ->
     case m of

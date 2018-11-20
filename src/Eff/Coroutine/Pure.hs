@@ -2,6 +2,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
 {-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Eff.Coroutine.Pure
   ( module Eff.Coroutine
@@ -20,8 +24,8 @@ data Status effs a b x
     -- @b@, possibly ending with a value of type @x@.
 
 -- | Launch a coroutine and report its status.
-runC :: Eff (Yield a b ': effs) w -> Eff effs (Status effs a b w)
-runC = handleRelay (return . Done) replyC
+runC :: forall a b effs w . Eff (Yield a b ': effs) w -> Eff effs (Status effs a b w)
+runC = handleRelay @(Yield a b : effs) @(Yield a b) @effs (return . Done) replyC
 
 -- | Launch a coroutine and report its status, without handling (removing)
 -- `Yield` from the typelist. This is useful for reducing nested coroutines.
@@ -34,4 +38,3 @@ replyC
   -> Arr r c (Status r a b w)
   -> Eff r (Status r a b w)
 replyC (Yield a k) arr = return $ Continue a (arr . k)
-

@@ -14,17 +14,21 @@ import Eff.State
 import Data.Proxy
 
 -- | Handler for State effects
-runState :: s -> Eff (State s ': r) w -> Eff r (w,s)
-runState s (Val x) = return (x,s)
-runState s (E u q) = case decomp u of
-  Right Get      -> runState s (qApp q s)
-  Right (Put s') -> runState s' (qApp q ())
-  Left  u'       -> E u' (tsingleton (\x -> runState s (qApp q x)))
+runState :: forall r s w o . (MemberOut (State s) r o) =>
+  s -> Eff r w -> Eff o (w, s)
+runState s = handleRelayS s (\s' a -> pure (a, s')) go
+  where go :: s
+           -> State s v
+           -> (s -> Arr o v (a, s))
+           -> Eff o (a, s)
 
-evalState :: s -> Eff (State s ': r) w -> Eff r w
+        go s' Get k = k s' s'
+        go _s' (Put s'') k = k s'' ()
+
+evalState :: (MemberOut (State s) r o) => s -> Eff (State s ': r) w -> Eff r w
 evalState = (fmap fst .) . runState
 
-execState :: s -> Eff (State s ': r) w -> Eff r s
+execState :: (MemberOut (State s) r o) => s -> Eff (State s ': r) w -> Eff r s
 execState = (fmap snd .) . runState
 
 -- |
@@ -41,4 +45,3 @@ transactionState _ m = do s <- get; loop s m
      Just Get      -> loop s (qApp q s)
      Just (Put s') -> loop s'(qApp q ())
      _             -> E u (tsingleton k) where k = qComp q (loop s)
-

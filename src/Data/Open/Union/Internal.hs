@@ -10,6 +10,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE IncoherentInstances #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# OPTIONS_GHC -fprint-potential-instances #-}
 
 -- GHC >=7.10 deprecated OverlappingInstances in favour of instance by instance
 -- annotation using OVERLAPPABLE and OVERLAPPING pragmas.
@@ -46,7 +49,7 @@
 -- substitution for @Typeable@.
 module Data.Open.Union.Internal where
 
-import Prelude ((+), (-))
+import Prelude ((+), (-), (>))
 
 import Data.Bool (otherwise)
 import Data.Either (Either(Left, Right))
@@ -128,6 +131,17 @@ instance PRAGMA_OVERLAPPABLE FindElem t r => FindElem t (t' ': r) where
 -- @
 -- 'prj' . 'inj' === 'Just'
 -- @
+
+type family Out (t :: * -> *) (r :: [* -> *]) :: [* -> *] where
+  Out t (t ': r)  = r
+  Out t (t' ': r)  = t' : Out t r
+
+class GetOut (t :: * -> *) (r :: [* -> *]) (o :: [* -> *])
+instance {-# OVERLAPPING #-}  GetOut t (t ': r) r
+instance {-# OVERLAPPABLE #-} (GetOut t (t' ': r) o) => GetOut t (t' ': r) o
+
+type MemberOut t r o = (Member t r, Out t r ~ o, GetOut t r o)
+
 class FindElem t r => Member (t :: * -> *) r where
     -- | Takes a request of type @t :: * -> *@, and injects it into the
     -- 'Union'.
@@ -142,12 +156,28 @@ class FindElem t r => Member (t :: * -> *) r where
     -- /O(1)/
     prj :: Union r a -> Maybe (t a)
 
+    project :: Union r a -> Either (Union (Out t r) a) (t a)
+
 instance FindElem t r => Member t r where
     inj = unsafeInj $ unP (elemNo :: P t r)
     {-# INLINE inj #-}
 
     prj = unsafePrj $ unP (elemNo :: P t r)
     {-# INLINE prj #-}
+
+    project union =
+      let i = unP (elemNo :: P t r)
+      in case prj union of
+           Nothing ->
+            -- if the effect contained in this union is *after* the current effect
+            -- we need to decrement its position. Otherwise its position stays the same
+            case union of
+              Union j e ->
+                let newIndex = if j > i then j - 1 else j
+                in  Left (Union newIndex e)
+
+           Just t ->
+            Right t
 
 -- | Orthogonal decomposition of a @'Union' (t ': r) :: * -> *@. 'Right' value
 -- is returned if the @'Union' (t ': r) :: * -> *@ contains @t :: * -> *@, and

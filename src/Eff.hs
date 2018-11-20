@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE GADTs #-}
 {-|
 Module      : Eff
 Description : Freer - an extensible effects library
@@ -14,6 +15,7 @@ Portability : POSIX
 -}
 module Eff (
   Member,
+  MemberOut,
   Members,
   Eff,
   run,
@@ -38,8 +40,6 @@ import Control.Applicative (pure)
 
 import Eff.Internal
 
-runNat
-  :: forall m r e w.
-     (Member m r)
-  => (forall a. e a -> m a) -> Eff (e ': r) w -> Eff r w
+runNat :: forall e r o m w . (MemberOut e r o, Member m o)
+  => (forall v. e v -> m v) -> Eff r w -> Eff o w
 runNat f = handleRelay pure (\v -> (send (f v) >>=))

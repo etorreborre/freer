@@ -1,4 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE MonoLocalBinds #-}
+
 module Tests.NonDetEff where
 
 import Control.Applicative
@@ -19,4 +23,4 @@ generatePrimes xs = do
   where gen = msum (fmap return xs)
 
 testIfte :: [Int] -> [Int]
-testIfte = run . makeChoiceA . generatePrimes
+testIfte = run . makeChoiceA @'[NonDetEff] . generatePrimes

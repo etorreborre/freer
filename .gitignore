@@ -7,6 +7,7 @@ cabal.sandbox.config
 dist
 dist-newstyle
 stack.yaml
+.ghc.environment.x86_64-darwin-8.4.3
 
 # emacs
 TAGS

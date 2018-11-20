@@ -2,6 +2,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Tests.Coroutine (
   runTestCoroutine
 ) where
@@ -16,7 +18,7 @@ import Eff.Coroutine.Pure
 import Eff.State.Pure
 
 runTestCoroutine :: [Int] -> Int
-runTestCoroutine list = snd $ run $ runState 0 effTestCoroutine
+runTestCoroutine list = snd $ run $ runState @'[State Int] (0 :: Int) effTestCoroutine
   where
     testCoroutine :: (Members '[Yield () Int, State Int] r) => Eff r ()
     testCoroutine = do

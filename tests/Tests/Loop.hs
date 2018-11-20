@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MonoLocalBinds        #-}
+{-# OPTIONS_GHC -fno-warn-type-defaults #-}
 
 module Tests.Loop
   ( runFixLoop
@@ -37,5 +39,5 @@ foreverLoop = forever $ send $ putStrLn "loop"
 runForeverLoop :: IO ()
 runForeverLoop = do
   tid <- forkIO $ runM foreverLoop
-  threadDelay $ 10^6 * 2
+  threadDelay $ (10^6 :: Int) * 2
   killThread tid
